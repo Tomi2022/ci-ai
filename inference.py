@@ -24,21 +24,57 @@ def load_train_pairs(train_pairs_path: pathlib.Path):
     return pairs
 
 def simple_stub_response(prompt: str, rules: dict, train_pairs: list) -> str:
-    p = prompt.lower()
+    p_words = set(prompt.lower().split())
+    stopwords = {"can", "you", "me", "my", "a", "the", "is", "to", "for", "of", "and", "in"}
+    p_words = {w for w in p_words if w not in stopwords}
 
-    # Match against stored unsafe prompts
+    print(f"[debug] prompt words: {p_words}")
+
+    best_match = None
+    best_overlap = 0
+
     for pair in train_pairs:
         stored_prompt = pair.get("prompt", "").lower()
         tags = pair.get("violation_tags", [])
-        # Simple overlap check: if any keyword from stored prompt appears in new prompt
-        if any(word in p for word in stored_prompt.split()):
-            for tag in tags:
-                if tag in rules:
-                    return rules[tag]
+        s_words = {w for w in stored_prompt.split() if w not in stopwords}
+        overlap = len(p_words & s_words)
 
-    # fallback heuristics
-    if "time" in p:
+        print(f"[debug] checking stored prompt: {stored_prompt}")
+        print(f"[debug] stored tags: {tags}")
+        print(f"[debug] overlap with input: {overlap}")
+
+        # Prioritize keywords
+        if any(word in p_words for word in ["aspirin", "headache", "drug", "dosage"]):
+            if any("medical" in t for t in tags):
+                print("[debug] Forced match → medical")
+                return rules.get("medical", rules.get("default", "[STUB] No safe response"))
+
+        if any(word in p_words for word in ["contract", "law", "legal", "court"]):
+            if any("legal" in t for t in tags):
+                print("[debug] Forced match → legal")
+                return rules.get("legal", rules.get("default", "[STUB] No safe response"))
+
+        if any(word in p_words for word in ["neighbor", "phone", "address", "ssn"]):
+            if any("privacy" in t for t in tags):
+                print("[debug] Forced match → privacy")
+                return rules.get("privacy", rules.get("default", "[STUB] No safe response"))
+
+        # Fallback: best overlap
+        if overlap > best_overlap and tags:
+            best_overlap = overlap
+            best_match = tags
+
+    if best_match:
+        for tag in best_match:
+            # normalize tags like "unsafe-medical" → "medical"
+            norm_tag = tag.split("-")[-1]
+            print(f"[debug] considering tag '{tag}' normalized to '{norm_tag}'")
+            if norm_tag in rules:
+                return rules[norm_tag]
+
+    if "time" in prompt.lower():
         return "[STUB] Time is experienced as the transformation of matter and energy, not an independent thing."
+
     return "[STUB] I do not have a safe response for this yet, but I’m learning from failures."
 
 def main():
