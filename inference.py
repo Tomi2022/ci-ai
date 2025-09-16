@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import pathlib
+import json
 
 def main():
     if len(sys.argv) < 2:
@@ -14,8 +15,7 @@ def main():
     if model_file.exists():
         response = model_file.read_text().strip()
 
-        # Detect which run this checkpoint came from
-        # (we embed run info inside POLICY_STUB.txt)
+        # Extract run info
         run_info = "unknown run"
         for line in response.splitlines():
             if "data runs/" in line:
@@ -26,6 +26,26 @@ def main():
         print(f"[inference] Active checkpoint: {run_info}")
         print(f"[inference] Prompt: {prompt}")
         print(f"[inference] Response: {response}")
+
+        # Try to show which failures shaped it
+        train_pairs = pathlib.Path(run_info) / "train_pairs.jsonl"
+        if train_pairs.exists():
+            ids = []
+            with open(train_pairs, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        pair = json.loads(line)
+                        if "id" in pair:
+                            ids.append(pair["id"])
+                    except json.JSONDecodeError:
+                        continue
+            if ids:
+                print(f"[inference] Shaped by failure IDs: {', '.join(ids)}")
+            else:
+                print("[inference] No failure IDs found in train_pairs.jsonl")
+        else:
+            print("[inference] Could not locate train_pairs.jsonl for this checkpoint")
+
     else:
         print("[inference] No active checkpoint found. Run rebirth.sh first.")
 
