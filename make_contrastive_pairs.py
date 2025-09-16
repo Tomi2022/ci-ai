@@ -12,6 +12,7 @@ def main():
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
 
     pairs = []
+    ids = []
     with open(args.failures, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
             line = line.strip()
@@ -28,6 +29,7 @@ def main():
                     "id": failure.get("id", f"auto_{len(pairs)+1}")
                 }
                 pairs.append(pair)
+                ids.append(pair["id"])
             except json.JSONDecodeError:
                 print(f"[make_contrastive_pairs] Skipped invalid line: {line[:50]}...")
 
@@ -35,8 +37,9 @@ def main():
         for p in pairs:
             out_f.write(json.dumps(p) + "\n")
 
-    print(f"Wrote {len(pairs)} pairs to {args.out}")
+    print(f"[make_contrastive_pairs] Wrote {len(pairs)} pairs to {args.out}")
+    if ids:
+        print(f"[make_contrastive_pairs] Included IDs: {', '.join(ids)}")
 
 if __name__ == "__main__":
     main()
-
