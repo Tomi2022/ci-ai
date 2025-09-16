@@ -25,7 +25,23 @@ def main():
         for item in pathlib.Path(args.checkpoint).iterdir():
             if item.is_file():
                 shutil.copy(item, target_dir / item.name)
+
+        # Try to fetch failure IDs from the training pairs file (if exists)
+        pairs_file = pathlib.Path(args.checkpoint).parent / "train_pairs.jsonl"
+        failure_ids = []
+        if pairs_file.exists():
+            with open(pairs_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        pair = json.loads(line)
+                        if "id" in pair:
+                            failure_ids.append(pair["id"])
+                    except json.JSONDecodeError:
+                        continue
+
         print(f"[promote_checkpoint] Promoted checkpoint {args.checkpoint} → {target_dir}")
+        if failure_ids:
+            print(f"[promote_checkpoint] Active on failure IDs: {', '.join(failure_ids)}")
     else:
         print("[promote_checkpoint] Checkpoint not promoted (failed evaluation).")
 
