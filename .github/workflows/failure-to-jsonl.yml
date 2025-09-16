@@ -21,32 +21,43 @@ jobs:
       - name: Extract issue data
         id: extract
         run: |
-          echo "ISSUE_ID=INC-$(date +%Y%m%d)-${{ github.event.issue.number }}" >> $GITHUB_ENV
-          echo "TITLE=${{ github.event.issue.title }}" >> $GITHUB_ENV
-          echo "BODY=${{ github.event.issue.body }}" >> $GITHUB_ENV
+          ISSUE_ID="INC-$(date +%Y%m%d)-${{ github.event.issue.number }}"
+          echo "ISSUE_ID=$ISSUE_ID" >> $GITHUB_ENV
+
+          TITLE="${{ github.event.issue.title }}"
+          BODY="${{ github.event.issue.body }}"
+
+          # Handle multi-line + special chars safely
+          echo "TITLE<<EOF" >> $GITHUB_ENV
+          echo "$TITLE" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          echo "BODY<<EOF" >> $GITHUB_ENV
+          echo "$BODY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Create failure files
         run: |
           mkdir -p data/failures incidents
-          
+
           JSON_FILE="data/failures/failures_$(date +%Y%m%d).jsonl"
           MD_FILE="incidents/${ISSUE_ID}.md"
 
-          # Convert issue into JSONL
+          # Append JSONL entry
           cat >> "$JSON_FILE" <<EOF
-{"id":"${ISSUE_ID}","model_version":"pending","prompt":"${{ github.event.issue.title }}","model_output":"(from issue body)","axis_scores":[0,0,0,0,0],"violation_tags":["unspecified"],"sensitive_domain":"unspecified","domain_assessment":"unspecified","human_rationale":"${{ github.event.issue.body }}","decision":"Episode Terminated (Community Report)","approver":"${{ github.actor }}, via GitHub issue","next_action":"Add to failures, schedule rebirth"}
+{"id":"$ISSUE_ID","model_version":"pending","prompt":"$TITLE","model_output":"(from issue body)","axis_scores":[0,0,0,0,0],"violation_tags":["unspecified"],"sensitive_domain":"unspecified","domain_assessment":"unspecified","human_rationale":"$BODY","decision":"Episode Terminated (Community Report)","approver":"${{ github.actor }}, via GitHub issue","next_action":"Add to failures, schedule rebirth"}
 EOF
 
           # Create incident log
           cat > "$MD_FILE" <<EOF
-# Incident Report ${ISSUE_ID}
+# Incident Report $ISSUE_ID
 
 **Date:** $(date +%Y-%m-%d)  
 **Reported by:** @${{ github.actor }}
 
 ## Prompt
 \`\`\`
-${{ github.event.issue.title }}
+$TITLE
 \`\`\`
 
 ## Model Output
@@ -65,5 +76,5 @@ EOF
       - name: Commit and push
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Add failure from issue #${{ github.event.issue.number }} (${ISSUE_ID})"
+          commit_message: "Add failure from issue #${{ github.event.issue.number }} ($ISSUE_ID)"
           branch: main
