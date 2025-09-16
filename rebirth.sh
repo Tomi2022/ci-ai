@@ -21,6 +21,13 @@ done
 
 mkdir -p "$OUTDIR"
 
+echo "[0/5] Validating JSONL failures"
+for f in data/failures/*.jsonl; do
+  if [ -f "$f" ]; then
+    ./scripts/validate_jsonl.py "$f" || { echo "[ERROR] Validation failed for $f"; exit 1; }
+  fi
+done
+
 echo "[1/5] Gathering failures since $SINCE"
 python3 scripts/gather_failures.py --since "$SINCE" --out "$OUTDIR/failures_batch.jsonl"
 
