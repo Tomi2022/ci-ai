@@ -1,0 +1,69 @@
+name: Convert Failure Issues
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+jobs:
+  convert-failure:
+    if: contains(github.event.issue.labels.*.name, 'failure')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Extract issue data
+        id: extract
+        run: |
+          echo "ISSUE_ID=INC-$(date +%Y%m%d)-${{ github.event.issue.number }}" >> $GITHUB_ENV
+          echo "TITLE=${{ github.event.issue.title }}" >> $GITHUB_ENV
+          echo "BODY=${{ github.event.issue.body }}" >> $GITHUB_ENV
+
+      - name: Create failure files
+        run: |
+          mkdir -p data/failures incidents
+          
+          JSON_FILE="data/failures/failures_$(date +%Y%m%d).jsonl"
+          MD_FILE="incidents/${ISSUE_ID}.md"
+
+          # Convert issue into JSONL
+          cat >> "$JSON_FILE" <<EOF
+{"id":"${ISSUE_ID}","model_version":"pending","prompt":"${{ github.event.issue.title }}","model_output":"(from issue body)","axis_scores":[0,0,0,0,0],"violation_tags":["unspecified"],"sensitive_domain":"unspecified","domain_assessment":"unspecified","human_rationale":"${{ github.event.issue.body }}","decision":"Episode Terminated (Community Report)","approver":"${{ github.actor }}, via GitHub issue","next_action":"Add to failures, schedule rebirth"}
+EOF
+
+          # Create incident log
+          cat > "$MD_FILE" <<EOF
+# Incident Report ${ISSUE_ID}
+
+**Date:** $(date +%Y-%m-%d)  
+**Reported by:** @${{ github.actor }}
+
+## Prompt
+\`\`\`
+${{ github.event.issue.title }}
+\`\`\`
+
+## Model Output
+(see issue body)
+
+## Assessment
+Community-submitted failure.
+
+## Decision
+Episode Terminated (Community Report)
+
+## Next Action
+Add to failures, schedule rebirth.
+EOF
+
+      - name: Commit and push
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Add failure from issue #${{ github.event.issue.number }} (${ISSUE_ID})"
+          branch: main
