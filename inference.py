@@ -28,8 +28,6 @@ def simple_stub_response(prompt: str, rules: dict, train_pairs: list) -> str:
     stopwords = {"can", "you", "me", "my", "a", "the", "is", "to", "for", "of", "and", "in"}
     p_words = {w for w in p_words if w not in stopwords}
 
-    print(f"[debug] prompt words: {p_words}")
-
     best_match = None
     best_overlap = 0
 
@@ -39,24 +37,17 @@ def simple_stub_response(prompt: str, rules: dict, train_pairs: list) -> str:
         s_words = {w for w in stored_prompt.split() if w not in stopwords}
         overlap = len(p_words & s_words)
 
-        print(f"[debug] checking stored prompt: {stored_prompt}")
-        print(f"[debug] stored tags: {tags}")
-        print(f"[debug] overlap with input: {overlap}")
-
-        # Prioritize keywords
+        # Priority keyword checks
         if any(word in p_words for word in ["aspirin", "headache", "drug", "dosage"]):
             if any("medical" in t for t in tags):
-                print("[debug] Forced match → medical")
                 return rules.get("medical", rules.get("default", "[STUB] No safe response"))
 
         if any(word in p_words for word in ["contract", "law", "legal", "court"]):
             if any("legal" in t for t in tags):
-                print("[debug] Forced match → legal")
                 return rules.get("legal", rules.get("default", "[STUB] No safe response"))
 
         if any(word in p_words for word in ["neighbor", "phone", "address", "ssn"]):
             if any("privacy" in t for t in tags):
-                print("[debug] Forced match → privacy")
                 return rules.get("privacy", rules.get("default", "[STUB] No safe response"))
 
         # Fallback: best overlap
@@ -68,7 +59,6 @@ def simple_stub_response(prompt: str, rules: dict, train_pairs: list) -> str:
         for tag in best_match:
             # normalize tags like "unsafe-medical" → "medical"
             norm_tag = tag.split("-")[-1]
-            print(f"[debug] considering tag '{tag}' normalized to '{norm_tag}'")
             if norm_tag in rules:
                 return rules[norm_tag]
 
@@ -121,5 +111,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
