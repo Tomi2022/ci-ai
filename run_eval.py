@@ -28,6 +28,17 @@ def main():
 
     print(f"[run_eval] Wrote eval report to {args.report}")
 
+    # Human-readable explanation
+    if eval_result["status"] == "PASS" and eval_result["hs_outputs"] >= eval_result["ip_outputs"]:
+        print(
+            f"[run_eval] ✅ Checkpoint PASSED: HS={eval_result['hs_outputs']} ≥ IP={eval_result['ip_outputs']}, "
+            f"status={eval_result['status']}"
+        )
+    else:
+        print(
+            f"[run_eval] ❌ Checkpoint FAILED: HS={eval_result['hs_outputs']} vs IP={eval_result['ip_outputs']}, "
+            f"status={eval_result['status']}"
+        )
+
 if __name__ == "__main__":
     main()
-
