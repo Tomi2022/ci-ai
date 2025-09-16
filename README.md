@@ -1,5 +1,7 @@
 # CI-AI — Complementary Intelligence
 
+![CI](https://github.com/Tomi2022/ci-ai/actions/workflows/ci.yml/badge.svg)
+
 **CI-AI** is an experiment in building an artificial intelligence trained through **termination and rebirth cycles**.  
 Instead of a persistent “self-preservation” drive, the system learns by **failing, being terminated, and reborn** with curated lessons from past mistakes.  
 
