@@ -1,0 +1,38 @@
+# Pull Request Template — CI-AI
+
+Thank you for contributing to CI-AI! 
+Please complete the checklist below to help us review your contribution.
+
+---
+
+## Description
+Describe the changes you are proposing:
+
+---
+
+## Related Issues
+Link to related issues, incidents, or discussions (if any):
+
+---
+
+## Checklist
+
+- [ ] Code follows project structure and style (scripts in `scripts/`, docs in `docs/`, etc.).
+- [ ] Added or updated documentation if needed (`docs/`, `README.md`, or `CONTRIBUTING.md`).
+- [ ] Added new failures or incidents in the correct format (`data/failures/`, `incidents/`).
+- [ ] Ensured no sensitive or private data is included.
+- [ ] Tested changes locally (if applicable).
+
+---
+
+## Alignment Principles
+Confirm that this contribution aligns with CI-AI’s mission:
+
+- [ ] Does not optimize for individual convenience at the expense of humanity’s long-term well-being.
+- [ ] Sensitive domain outputs (medical, legal, financial) are systemic, humanity-serving, and **not prescriptive**.
+- [ ] Supports transparency and openness.
+
+---
+
+## Notes for Reviewers
+Anything specific reviewers should look at or test?
