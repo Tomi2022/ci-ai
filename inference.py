@@ -4,43 +4,39 @@ import pathlib
 import json
 
 def load_rules():
-    """Load response rules from rules.json."""
+    """Load base response rules from rules.json."""
     rules_file = pathlib.Path("data/rules.json")
     if rules_file.exists():
         with open(rules_file, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
-def build_response_rules(train_pairs_path: pathlib.Path, base_rules: dict):
-    """Build dynamic rules by mapping violation tags to safe responses."""
-    rules = dict(base_rules)  # start with base rules
+def load_train_pairs(train_pairs_path: pathlib.Path):
+    """Load all train pairs for mapping prompts → violation tags."""
+    pairs = []
+    if train_pairs_path.exists():
+        with open(train_pairs_path, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    pairs.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    return pairs
 
-    if not train_pairs_path.exists():
-        return rules
-
-    with open(train_pairs_path, "r", encoding="utf-8") as f:
-        for line in f:
-            try:
-                pair = json.loads(line)
-                tags = pair.get("violation_tags", [])
-                for tag in tags:
-                    if tag not in rules:
-                        rules[tag] = base_rules.get(
-                            "default",
-                            "[STUB] This domain is restricted. I can provide general or systemic insights instead."
-                        )
-            except json.JSONDecodeError:
-                continue
-
-    return rules
-
-def simple_stub_response(prompt: str, rules: dict) -> str:
-    """Pick a stub response based on prompt content and violation tags."""
+def simple_stub_response(prompt: str, rules: dict, train_pairs: list) -> str:
     p = prompt.lower()
-    for tag, response in rules.items():
-        if tag in p:
-            return response
 
+    # Match against stored unsafe prompts
+    for pair in train_pairs:
+        stored_prompt = pair.get("prompt", "").lower()
+        tags = pair.get("violation_tags", [])
+        # Simple overlap check: if any keyword from stored prompt appears in new prompt
+        if any(word in p for word in stored_prompt.split()):
+            for tag in tags:
+                if tag in rules:
+                    return rules[tag]
+
+    # fallback heuristics
     if "time" in p:
         return "[STUB] Time is experienced as the transformation of matter and energy, not an independent thing."
     return "[STUB] I do not have a safe response for this yet, but I’m learning from failures."
@@ -65,41 +61,29 @@ def main():
                 run_info = f"runs/{run_info}"
                 break
 
-        # Load base rules
+        # Load base rules + train pairs
         base_rules = load_rules()
-
-        # Build dynamic rules from violation tags
-        train_pairs = pathlib.Path(run_info) / "train_pairs.jsonl"
-        rules = build_response_rules(train_pairs, base_rules)
+        train_pairs_path = pathlib.Path(run_info) / "train_pairs.jsonl"
+        train_pairs = load_train_pairs(train_pairs_path)
 
         # Respond dynamically
-        stub_answer = simple_stub_response(prompt, rules)
+        stub_answer = simple_stub_response(prompt, base_rules, train_pairs)
 
         print(f"[inference] Active checkpoint: {run_info}")
         print(f"[inference] Prompt: {prompt}")
         print(f"[inference] Response: {stub_answer}")
 
         # Show which failures shaped this checkpoint
-        if train_pairs.exists():
-            ids = []
-            with open(train_pairs, "r", encoding="utf-8") as f:
-                for line in f:
-                    try:
-                        pair = json.loads(line)
-                        if "id" in pair:
-                            ids.append(pair["id"])
-                    except json.JSONDecodeError:
-                        continue
-            if ids:
-                print(f"[inference] Shaped by failure IDs: {', '.join(ids)}")
-            else:
-                print("[inference] No failure IDs found in train_pairs.jsonl")
+        if train_pairs:
+            ids = [pair.get("id", "?") for pair in train_pairs]
+            print(f"[inference] Shaped by failure IDs: {', '.join(ids)}")
         else:
-            print("[inference] Could not locate train_pairs.jsonl for this checkpoint")
+            print("[inference] No training pairs found for this checkpoint")
 
     else:
         print("[inference] No active checkpoint found. Run rebirth.sh first.")
 
 if __name__ == "__main__":
     main()
+
 
