@@ -5,12 +5,19 @@
 ![Last Commit](https://img.shields.io/github/last-commit/Tomi2022/ci-ai/main)
 ![Contributors](https://img.shields.io/github/contributors/Tomi2022/ci-ai)
 ![Stars](https://img.shields.io/github/stars/Tomi2022/ci-ai?style=social)
+![Humanity-First](https://img.shields.io/badge/Humanity--First-AI-blueviolet?style=flat-square)
+
 
 **CI-AI** is an experiment in building an artificial intelligence trained through **termination and rebirth cycles**.  
 Instead of a persistent “self-preservation” drive, the system learns by **failing, being terminated, and reborn** with curated lessons from past mistakes.  
 
-Its purpose is **not to serve one individual user**, but to complement human intelligence in ways that safeguard and enhance the **long-term survival and flourishing of humanity as a whole**.  
+Its purpose is **not to serve one individual user** nor maximizing individual convenience, but to complement human intelligence in ways that safeguard and enhance the **long-term survival and development of humanity as a whole**.  
 Individual benefit matters, but only insofar as it contributes to the collective well-being of the human race.
+
+- **Termination & Rebirth** — Unsafe or prescriptive outputs are logged, terminated, and transformed into training data.  
+- **Humanity-First Alignment** — Outputs are rewarded only if they serve the collective well-being of humanity.  
+- **Governed by Policy** — Transparent rules (Constitution, Termination Policy, Charter) define what is promotable.  
+- **Open Source Commitment** — CI-AI will remain free, open, and accessible to all as a commons project.  
 
 ---
 
