@@ -19,7 +19,7 @@ Individual benefit matters, but only insofar as it contributes to the collective
 
 ---
 
-## 📂 Repository Structure
+##  Repository Structure
 ci-ai/
 ├── rebirth.sh # main pipeline script
 ├── scripts/ # helper scripts
@@ -52,7 +52,7 @@ ci-ai/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 1. Clone the repo
 
