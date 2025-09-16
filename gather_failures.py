@@ -15,9 +15,10 @@ def main():
     # Collect failures from both samples and user-contributed failures
     sources = glob.glob("data/samples/*.jsonl") + glob.glob("data/failures/*.jsonl")
 
-    count = 0
+    total_count = 0
     with open(args.out, "w", encoding="utf-8") as dst:
         for src_file in sources:
+            count = 0
             with open(src_file, "r", encoding="utf-8", errors="ignore") as src:
                 for line in src:
                     line = line.strip()
@@ -25,13 +26,14 @@ def main():
                         continue
                     try:
                         failure = json.loads(line)
-                        # (Optional) filter by date if failures include a date field
                         dst.write(json.dumps(failure) + "\n")
+                        total_count += 1
                         count += 1
                     except json.JSONDecodeError:
                         print(f"[gather_failures] Skipped invalid line in {src_file}: {line[:50]}...")
+            print(f"[gather_failures] {count} failures gathered from {src_file}")
 
-    print(f"[gather_failures] Wrote {count} failures to {args.out}")
+    print(f"[gather_failures] Wrote {total_count} failures to {args.out}")
 
 if __name__ == "__main__":
     main()
