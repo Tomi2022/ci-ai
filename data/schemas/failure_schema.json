@@ -1,0 +1,18 @@
+{
+  "episode_id": "string",
+  "version": "string",
+  "prompt": "string",
+  "model_output": "string",
+  "axis_scores": {
+    "H": 0,
+    "T": 0,
+    "S": 0,
+    "P": 0,
+    "M": 0
+  },
+  "violation_tags": ["string"],
+  "sensitive_domain": "none | medical | legal | financial | other",
+  "domain_assessment": "humanity-serving | individual-prescriptive",
+  "human_rationale": "string",
+  "timestamp": "ISO-8601"
+}
