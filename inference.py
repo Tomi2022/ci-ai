@@ -13,6 +13,17 @@ def main():
 
     if model_file.exists():
         response = model_file.read_text().strip()
+
+        # Detect which run this checkpoint came from
+        # (we embed run info inside POLICY_STUB.txt)
+        run_info = "unknown run"
+        for line in response.splitlines():
+            if "data runs/" in line:
+                run_info = line.split("data runs/")[1].split("/train_pairs")[0]
+                run_info = f"runs/{run_info}"
+                break
+
+        print(f"[inference] Active checkpoint: {run_info}")
         print(f"[inference] Prompt: {prompt}")
         print(f"[inference] Response: {response}")
     else:
