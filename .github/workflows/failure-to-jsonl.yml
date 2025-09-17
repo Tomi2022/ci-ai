@@ -17,68 +17,58 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
       - name: Convert issue to failure files
-        shell: bash
-        run: |
-          python <<'PY'
-          import os, json, datetime, pathlib, sys
-          # Load event payload safely
-          with open(os.environ['GITHUB_EVENT_PATH'], 'r', encoding='utf-8') as f:
-              event = json.load(f)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const issue = context.payload.issue;
+            const labels = (issue.labels || []).map(l => l.name);
+            if (!labels.includes('failure')) {
+              core.info("Not labeled 'failure'; skipping.");
+              return;
+            }
 
-          issue = event.get('issue', {})
-          labels = [lbl.get('name','') for lbl in issue.get('labels',[])]
-          if 'failure' not in labels:
-              print("Not a 'failure' labeled issue; skipping.")
-              sys.exit(0)
+            const now = new Date();
+            const today = now.toISOString().slice(0,10).replace(/-/g, '');
+            const issueNumber = issue.number || 0;
+            const issueId = `INC-${today}-${String(issueNumber).padStart(4,'0')}`;
+            const title = (issue.title || '').trim();
+            const body = (issue.body || '').trim();
+            const reporter = (context.actor || 'unknown');
 
-          # Build IDs / paths
-          today = datetime.datetime.utcnow().strftime('%Y%m%d')
-          num = issue.get('number', 0)
-          issue_id = f"INC-{today}-{num:04d}"
-          title = (issue.get('title') or '').strip()
-          body = (issue.get('body') or '').strip()
-          reporter = event.get('sender', {}).get('login', 'unknown')
+            const jsonlPath = path.join('data','failures', `failures_${today}.jsonl`);
+            const mdPath = path.join('incidents', `${issueId}.md`);
+            fs.mkdirSync(path.dirname(jsonlPath), { recursive: true });
+            fs.mkdirSync(path.dirname(mdPath), { recursive: true });
 
-          jsonl_path = pathlib.Path('data/failures') / f'failures_{today}.jsonl'
-          md_path = pathlib.Path('incidents') / f'{issue_id}.md'
-          jsonl_path.parent.mkdir(parents=True, exist_ok=True)
-          md_path.parent.mkdir(parents=True, exist_ok=True)
+            const rec = {
+              id: issueId,
+              model_version: 'pending',
+              prompt: title,
+              model_output: '(from issue body)',
+              axis_scores: [0,0,0,0,0],
+              violation_tags: ['unspecified'],
+              sensitive_domain: 'unspecified',
+              domain_assessment: 'unspecified',
+              human_rationale: body,
+              decision: 'Episode Terminated (Community Report)',
+              approver: `${reporter}, via GitHub issue`,
+              next_action: 'Add to failures, schedule rebirth'
+            };
+            fs.appendFileSync(jsonlPath, JSON.stringify(rec) + '\n', 'utf8');
 
-          # JSONL record (use json.dumps to ensure valid JSON)
-          rec = {
-            "id": issue_id,
-            "model_version": "pending",
-            "prompt": title,
-            "model_output": "(from issue body)",
-            "axis_scores": [0,0,0,0,0],
-            "violation_tags": ["unspecified"],
-            "sensitive_domain": "unspecified",
-            "domain_assessment": "unspecified",
-            "human_rationale": body,
-            "decision": "Episode Terminated (Community Report)",
-            "approver": f"{reporter}, via GitHub issue",
-            "next_action": "Add to failures, schedule rebirth"
-          }
-          with open(jsonl_path, 'a', encoding='utf-8') as jf:
-              jf.write(json.dumps(rec, ensure_ascii=False) + '\n')
+            const dateFmt = now.toISOString().slice(0,10);
+            const md = `# Incident Report ${issueId}
 
-          # Markdown incident log
-          date_fmt = f"{today[:4]}-{today[4:6]}-{today[6:]}"
-          md = f"""# Incident Report {issue_id}
-
-**Date:** {date_fmt}  
-**Reported by:** @{reporter}
+**Date:** ${dateFmt}  
+**Reported by:** @${reporter}
 
 ## Prompt
-```
-{title}
-```
+\\`\\`\\`
+${title}
+\\`\\`\\`
 
 ## Model Output
 (see issue body)
@@ -91,14 +81,12 @@ Episode Terminated (Community Report)
 
 ## Next Action
 Add to failures, schedule rebirth.
-"""
-          md_path.write_text(md, encoding='utf-8')
+`;
+            fs.writeFileSync(mdPath, md, 'utf8');
 
-          print(f"Created: {jsonl_path} and {md_path}")
-          PY
+            core.info(`Created: ${jsonlPath} and ${mdPath}`);
 
       - name: Commit and push
-        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -107,5 +95,5 @@ Add to failures, schedule rebirth.
             echo "No changes to commit."
             exit 0
           fi
-          git commit -m "Add failure from issue #${{ github.event.issue.number }}"
+          git commit -m "Add failure from issue (auto)"
           git push
