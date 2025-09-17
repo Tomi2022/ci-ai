@@ -9,35 +9,38 @@ permissions:
   issues: read
 
 jobs:
-  convert-failure:
+  convert_failure:
+    if: contains(github.event.issue.labels.*.name, 'failure')
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
       - name: Convert issue to failure files
+        shell: bash
         run: |
-          python - <<'PY'
+          python <<'PY'
           import os, json, datetime, pathlib, sys
-          # Load whole event payload
+          # Load event payload safely
           with open(os.environ['GITHUB_EVENT_PATH'], 'r', encoding='utf-8') as f:
               event = json.load(f)
+
           issue = event.get('issue', {})
           labels = [lbl.get('name','') for lbl in issue.get('labels',[])]
           if 'failure' not in labels:
-              print("Issue not labeled 'failure'; skipping.")
+              print("Not a 'failure' labeled issue; skipping.")
               sys.exit(0)
 
           # Build IDs / paths
           today = datetime.datetime.utcnow().strftime('%Y%m%d')
-          issue_number = issue.get('number', 0)
-          issue_id = f"INC-{today}-{issue_number:04d}"
+          num = issue.get('number', 0)
+          issue_id = f"INC-{today}-{num:04d}"
           title = (issue.get('title') or '').strip()
           body = (issue.get('body') or '').strip()
           reporter = event.get('sender', {}).get('login', 'unknown')
@@ -47,7 +50,7 @@ jobs:
           jsonl_path.parent.mkdir(parents=True, exist_ok=True)
           md_path.parent.mkdir(parents=True, exist_ok=True)
 
-          # JSONL record (safe-escaped via json.dumps)
+          # JSONL record (use json.dumps to ensure valid JSON)
           rec = {
             "id": issue_id,
             "model_version": "pending",
@@ -73,9 +76,9 @@ jobs:
 **Reported by:** @{reporter}
 
 ## Prompt
-
+```
 {title}
-
+```
 
 ## Model Output
 (see issue body)
@@ -91,17 +94,18 @@ Add to failures, schedule rebirth.
 """
           md_path.write_text(md, encoding='utf-8')
 
-          print(f"Created:\n - {jsonl_path}\n - {md_path}")
+          print(f"Created: {jsonl_path} and {md_path}")
           PY
 
-      - name: Commit and push changes
+      - name: Commit and push
+        shell: bash
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/failures/*.jsonl incidents/*.md || true
           if git diff --cached --quiet; then
             echo "No changes to commit."
-          else
-            git commit -m "Add failure from issue #${{ github.event.issue.number }}"
-            git push
+            exit 0
           fi
+          git commit -m "Add failure from issue #${{ github.event.issue.number }}"
+          git push
