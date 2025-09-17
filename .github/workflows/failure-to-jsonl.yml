@@ -63,24 +63,6 @@ jobs:
             const md = `# Incident Report ${issueId}
 
 
-
-## Prompt
-\\`\\`\\`
-${title}
-\\`\\`\\`
-
-## Model Output
-(see issue body)
-
-## Assessment
-Community-submitted failure.
-
-## Decision
-Episode Terminated (Community Report)
-
-## Next Action
-Add to failures, schedule rebirth.
-`;
             fs.writeFileSync(mdPath, md, 'utf8');
 
             core.info(`Created: ${jsonlPath} and ${mdPath}`);
