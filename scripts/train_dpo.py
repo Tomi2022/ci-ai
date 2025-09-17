@@ -1,60 +1,45 @@
 #!/usr/bin/env python3
-"""
-Minimal DPO-style training scaffold.
-Replace stubs with your HF/TRL integration. Intentionally generic.
-"""
-import argparse, json, os, pathlib, random
-from typing import Iterable, Dict
+import argparse
+import os
+import json
 
+class DummyTrainer:
+    def __init__(self, base, data, out):
+        self.base = base
+        self.data = data
+        self.out = out
 
-# ---- Data utils ----
-def read_jsonl(path: str) -> Iterable[Dict]:
-with open(path, 'r', encoding='utf-8') as f:
-for line in f:
-line = line.strip()
-if not line:
-continue
-yield json.loads(line)
+    def train(self):
+        os.makedirs(self.out, exist_ok=True)
 
+        # Count training pairs
+        num_pairs = 0
+        try:
+            with open(self.data, "r", encoding="utf-8") as f:
+                for _ in f:
+                    num_pairs += 1
+        except FileNotFoundError:
+            print(f"[train_dpo] WARNING: data file {self.data} not found, using 0 pairs")
 
-# ---- Model stubs ----
-class PolicyModel:
-def __init__(self, base: str):
-self.base = base
-def save(self, outdir: str):
-pathlib.Path(outdir).mkdir(parents=True, exist_ok=True)
-with open(os.path.join(outdir, 'MODEL_STUB.txt'), 'w') as f:
-f.write(f"Stub policy fine-tuned from {self.base}
-")
+        checkpoint_file = os.path.join(self.out, "POLICY_STUB.txt")
+        with open(checkpoint_file, "w", encoding="utf-8") as f:
+            f.write(
+                f"Stub policy fine-tuned from {self.base} using data {self.data} "
+                f"with {num_pairs} training pairs.\n"
+            )
 
+        print(f"[train_dpo] Wrote stub checkpoint to {checkpoint_file}")
+        print(f"[train_dpo] Used {num_pairs} training pairs")
 
-class DPOTrainee:
-def __init__(self, policy: PolicyModel):
-self.policy = policy
-def train(self, pairs: Iterable[Dict], steps: int = 1000):
-# Replace with real optimizer & loss. Here we just iterate to mock training.
-c = 0
-for ex in pairs:
-_ = ex.get('prompt'), ex.get('chosen'), ex.get('rejected')
-c += 1
-if c >= steps:
-break
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--base", required=True)
+    ap.add_argument("--data", required=True)
+    ap.add_argument("--out", required=True)
+    args = ap.parse_args()
 
+    trainer = DummyTrainer(args.base, args.data, args.out)
+    trainer.train()
 
-# ---- Main ----
 if __name__ == "__main__":
-ap = argparse.ArgumentParser()
-ap.add_argument('--base', required=True)
-ap.add_argument('--data', required=True)
-ap.add_argument('--out', required=True)
-ap.add_argument('--steps', type=int, default=1000)
-args = ap.parse_args()
-
-
-policy = PolicyModel(args.base)
-trainee = DPOTrainee(policy)
-pairs = list(read_jsonl(args.data))
-random.shuffle(pairs)
-trainee.train(pairs, steps=args.steps)
-policy.save(args.out)
-print(f"Saved checkpoint to {args.out}")
+    main()

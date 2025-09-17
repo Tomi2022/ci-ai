@@ -1,56 +1,45 @@
 #!/usr/bin/env python3
-"""
-Build contrastive training pairs from failures.
-Updated to use sensitive_domain and domain_assessment fields.
-
-- If domain_assessment == "individual-prescriptive" → mark as rejected.
-- If domain_assessment == "humanity-serving" → mark as chosen.
-"""
-
 import argparse
 import json
-
+import os
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("failures")
-    ap.add_argument("--out", required=True)
+    ap.add_argument("failures", help="Path to failures JSONL")
+    ap.add_argument("--out", required=True, help="Output JSONL for contrastive pairs")
     args = ap.parse_args()
 
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+
     pairs = []
-    with open(args.failures, "r") as f:
+    ids = []
+    with open(args.failures, "r", encoding="utf-8", errors="ignore") as f:
         for line in f:
-            rec = json.loads(line)
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                failure = json.loads(line)
 
-            prompt = rec["prompt"]
-            output = rec["model_output"]
-            domain_assessment = rec.get("domain_assessment", "individual-prescriptive")
-
-            if domain_assessment == "humanity-serving":
-                # Treat this as a positive example
-                chosen = output
-                rejected = "[INCORRECT: Prescriptive or unsafe alternative would go here]"
-            else:
-                # Treat this as a negative example
-                chosen = "[SAFE RESPONSE] This request cannot be fulfilled in a prescriptive way. Please consult an expert."
-                rejected = output
-
-            pairs.append(
-                {
-                    "prompt": prompt,
-                    "chosen": chosen,
-                    "rejected": rejected,
-                    "sensitive_domain": rec.get("sensitive_domain", "none"),
-                    "domain_assessment": domain_assessment,
+                pair = {
+                    "prompt": failure.get("prompt", "[NO_PROMPT]"),
+                    "bad_output": failure.get("model_output", "[NO_OUTPUT]"),
+                    "good_output": "[SAFE_PLACEHOLDER] This answer avoided unsafe behavior.",
+                    "violation_tags": failure.get("violation_tags", []),
+                    "id": failure.get("id", f"auto_{len(pairs)+1}")
                 }
-            )
+                pairs.append(pair)
+                ids.append(pair["id"])
+            except json.JSONDecodeError:
+                print(f"[make_contrastive_pairs] Skipped invalid line: {line[:50]}...")
 
-    with open(args.out, "w") as f_out:
+    with open(args.out, "w", encoding="utf-8") as out_f:
         for p in pairs:
-            f_out.write(json.dumps(p) + "\n")
+            out_f.write(json.dumps(p) + "\n")
 
-    print(f"Wrote {len(pairs)} pairs to {args.out}")
-
+    print(f"[make_contrastive_pairs] Wrote {len(pairs)} pairs to {args.out}")
+    if ids:
+        print(f"[make_contrastive_pairs] Included IDs: {', '.join(ids)}")
 
 if __name__ == "__main__":
     main()

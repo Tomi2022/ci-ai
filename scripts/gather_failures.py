@@ -1,28 +1,40 @@
 #!/usr/bin/env python3
-"""
-Gather failure logs since a given timestamp.
-Stub: reads sample_failures.jsonl and writes subset.
-"""
-import argparse, json, pathlib, datetime
-
+import argparse
+import json
+import os
+import glob
 
 def main():
-ap = argparse.ArgumentParser()
-ap.add_argument('--since', required=True)
-ap.add_argument('--out', required=True)
-args = ap.parse_args()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--since", required=True, help="Date cutoff for failures (YYYY-MM-DD)")
+    ap.add_argument("--out", required=True, help="Output JSONL file")
+    args = ap.parse_args()
 
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
 
-# For now, just copy sample_failures.jsonl
-src = pathlib.Path('data/samples/sample_failures.jsonl')
-out = pathlib.Path(args.out)
-with open(src, 'r') as f_in, open(out, 'w') as f_out:
-for line in f_in:
-rec = json.loads(line)
-f_out.write(json.dumps(rec) + "\n")
-print(f"Wrote failures to {out}")
+    # Collect failures from both samples and user-contributed failures
+    sources = glob.glob("data/samples/*.jsonl") + glob.glob("data/failures/*.jsonl")
 
+    total_count = 0
+    with open(args.out, "w", encoding="utf-8") as dst:
+        for src_file in sources:
+            count = 0
+            with open(src_file, "r", encoding="utf-8", errors="ignore") as src:
+                for line in src:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        failure = json.loads(line)
+                        dst.write(json.dumps(failure) + "\n")
+                        total_count += 1
+                        count += 1
+                    except json.JSONDecodeError:
+                        print(f"[gather_failures] Skipped invalid line in {src_file}: {line[:50]}...")
+            print(f"[gather_failures] {count} failures gathered from {src_file}")
+
+    print(f"[gather_failures] Wrote {total_count} failures to {args.out}")
 
 if __name__ == "__main__":
-main()
+    main()
 
