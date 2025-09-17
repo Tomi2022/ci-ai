@@ -62,8 +62,7 @@ jobs:
             const dateFmt = now.toISOString().slice(0,10);
             const md = `# Incident Report ${issueId}
 
-**Date:** ${dateFmt}  
-**Reported by:** @${reporter}
+
 
 ## Prompt
 \\`\\`\\`
