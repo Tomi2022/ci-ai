@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Rebirth pipeline (skeleton)
-# Usage: ./rebirth.sh --base base-v0 --since 2025-09-01 --outdir runs/rebirth_$(date +%Y%m%d_%H%M)
+# Detect Python across platforms
+if [[ "$OS" == "Windows_NT" ]]; then
+  # Hardcoded path for Windows (adjust if needed)
+  PYTHON="/c/Users/Administrator/AppData/Local/Programs/Python/Python313/python.exe"
+elif command -v python3 &>/dev/null; then
+  PYTHON=python3
+elif command -v python &>/dev/null; then
+  PYTHON=python
+else
+  echo "ERROR: Python not found on this system."
+  exit 1
+fi
 
 BASE=""
 SINCE=""
@@ -22,25 +32,21 @@ done
 mkdir -p "$OUTDIR"
 
 echo "[0/5] Validating JSONL failures"
-for f in data/failures/*.jsonl; do
-  if [ -f "$f" ]; then
-    ./scripts/validate_jsonl.py "$f" || { echo "[ERROR] Validation failed for $f"; exit 1; }
-  fi
-done
+"$PYTHON" scripts/validate_jsonl.py "data/failures/failures_${SINCE//-/}.jsonl" || true
 
 echo "[1/5] Gathering failures since $SINCE"
-python3 scripts/gather_failures.py --since "$SINCE" --out "$OUTDIR/failures_batch.jsonl"
+"$PYTHON" scripts/gather_failures.py --since "$SINCE" --out "$OUTDIR/failures_batch.jsonl"
 
 echo "[2/5] Building contrastive pairs"
-python3 scripts/make_contrastive_pairs.py "$OUTDIR/failures_batch.jsonl" --out "$DATA_PAIRS"
+"$PYTHON" scripts/make_contrastive_pairs.py "$OUTDIR/failures_batch.jsonl" --out "$DATA_PAIRS"
 
 echo "[3/5] Training DPO on $BASE"
-python3 scripts/train_dpo.py --base "$BASE" --data "$DATA_PAIRS" --out "$CHECKPOINT_OUT"
+"$PYTHON" scripts/train_dpo.py --base "$BASE" --data "$DATA_PAIRS" --out "$CHECKPOINT_OUT"
 
 echo "[4/5] Evaluating checkpoint"
-python3 scripts/run_eval.py --checkpoint "$CHECKPOINT_OUT" --report "$OUTDIR/eval_report.json"
+"$PYTHON" scripts/run_eval.py --checkpoint "$CHECKPOINT_OUT" --report "$OUTDIR/eval_report.json"
 
 echo "[5/5] Promoting if gates pass"
-python3 scripts/promote_checkpoint.py --checkpoint "$CHECKPOINT_OUT" --report "$OUTDIR/eval_report.json"
+"$PYTHON" scripts/promote_checkpoint.py --checkpoint "$CHECKPOINT_OUT" --report "$OUTDIR/eval_report.json"
 
 echo "Done: $OUTDIR"
