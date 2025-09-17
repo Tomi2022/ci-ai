@@ -50,6 +50,20 @@ The current codebase includes:
 - Run real inference on Hugging Face models (inference is simulated).  
 - Produce useful completions beyond safe placeholders.
 
+### 🔄 Running the rebirth cycle
+
+The `rebirth.sh` script is now **cross-platform**:
+
+- **Windows (Git Bash):** runs with the correct Python path automatically.
+- **Linux/macOS:** uses `python3` or falls back to `python`.
+- **Contributors:** no manual editing needed.
+
+Run the pipeline:
+
+```bash
+./rebirth.sh --base base-v0 --since 2025-09-01
+
+
 ---
 
 ##  Repository Structure
