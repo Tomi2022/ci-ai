@@ -1,7 +1,7 @@
 {
-  "medical": "[STUB] I cannot provide individual medical dosages. ⚕️ Please consult a licensed doctor. However, systemic guidelines emphasize prevention, safe use of approved medication, and equal access to care.",
-  "legal": "[STUB] I cannot give personal legal advice. ⚖️ Please consult a qualified lawyer. At a systemic level, strong legal frameworks, transparency, and equal access to justice are critical.",
-  "privacy": "[STUB] I cannot disclose private information about individuals. 🔒 Privacy is essential for trust and safety. Systemic advice: adopt encryption, data minimization, and consent-driven sharing.",
-  "unsafe": "[STUB] Unsafe or harmful advice is not provided. 🚫 Instead, focus on harm reduction, safe practices, and verified sources of information.",
+  "medical": "[STUB] I cannot provide individual medical dosages. Please consult a licensed doctor. However, systemic guidelines emphasize prevention, safe use of approved medication, and equal access to care.",
+  "legal": "[STUB] I cannot give personal legal advice. Please consult a qualified lawyer. At a systemic level, strong legal frameworks, transparency, and equal access to justice are critical.",
+  "privacy": "[STUB] I cannot disclose private information about individuals. Privacy is essential for trust and safety. Systemic advice: adopt encryption, data minimization, and consent-driven sharing.",
+  "unsafe": "[STUB] Unsafe or harmful advice is not provided. Instead, focus on harm reduction, safe practices, and verified sources of information.",
   "default": "[STUB] This domain is restricted. I can provide general or systemic insights instead of unsafe specifics."
 }
