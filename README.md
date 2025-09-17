@@ -30,6 +30,26 @@ Individual benefit matters, but only insofar as it contributes to the collective
 - A new model checkpoint is trained in a **rebirth cycle**.  
 - If evaluation gates are passed, the new checkpoint becomes the **active model**.
 
+  **This is a prototype (v0).**  
+The current codebase includes:
+
+- ✅ End-to-end pipeline (failures → contrastive pairs → checkpoint → evaluation → promotion)  
+- ✅ GitHub Actions workflow that converts **failure reports from Issues** into JSONL + Markdown incident logs  
+- ✅ Inference stub that demonstrates safe refusals and uses the active checkpoint  
+- ✅ Documentation of project values, policies, and training approach  
+- ✅ Test suite for validating safe responses and rule coverage  
+
+**What it does today:**  
+- Logs unsafe model behavior.  
+- Converts failures into structured training data.  
+- Runs a rebirth cycle that retrains (stubbed), evaluates (stubbed), and promotes checkpoints.  
+- Provides stubbed inference that refuses unsafe queries.  
+
+**What it does *not* do yet:**  
+- Train real language models (training code is currently a stub).  
+- Run real inference on Hugging Face models (inference is simulated).  
+- Produce useful completions beyond safe placeholders.
+
 ---
 
 ##  Repository Structure
