@@ -63,10 +63,6 @@ jobs:
             const md = `# Incident Report ${issueId}
 
 
-            fs.writeFileSync(mdPath, md, 'utf8');
-
-            core.info(`Created: ${jsonlPath} and ${mdPath}`);
-
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
