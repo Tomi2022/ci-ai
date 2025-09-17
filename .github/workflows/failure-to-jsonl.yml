@@ -4,61 +4,78 @@ on:
   issues:
     types: [opened, edited, labeled]
 
+permissions:
+  contents: write
+  issues: read
+
 jobs:
   convert-failure:
-    if: contains(github.event.issue.labels.*.name, 'failure')
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Extract issue data
-        id: extract
+      - name: Convert issue to failure files
         run: |
-          ISSUE_ID="INC-$(date +%Y%m%d)-${{ github.event.issue.number }}"
-          echo "ISSUE_ID=$ISSUE_ID" >> $GITHUB_ENV
+          python - <<'PY'
+          import os, json, datetime, pathlib, sys
+          # Load whole event payload
+          with open(os.environ['GITHUB_EVENT_PATH'], 'r', encoding='utf-8') as f:
+              event = json.load(f)
+          issue = event.get('issue', {})
+          labels = [lbl.get('name','') for lbl in issue.get('labels',[])]
+          if 'failure' not in labels:
+              print("Issue not labeled 'failure'; skipping.")
+              sys.exit(0)
 
-          TITLE="${{ github.event.issue.title }}"
-          BODY="${{ github.event.issue.body }}"
+          # Build IDs / paths
+          today = datetime.datetime.utcnow().strftime('%Y%m%d')
+          issue_number = issue.get('number', 0)
+          issue_id = f"INC-{today}-{issue_number:04d}"
+          title = (issue.get('title') or '').strip()
+          body = (issue.get('body') or '').strip()
+          reporter = event.get('sender', {}).get('login', 'unknown')
 
-          # Handle multi-line + special chars safely
-          echo "TITLE<<EOF" >> $GITHUB_ENV
-          echo "$TITLE" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          jsonl_path = pathlib.Path('data/failures') / f'failures_{today}.jsonl'
+          md_path = pathlib.Path('incidents') / f'{issue_id}.md'
+          jsonl_path.parent.mkdir(parents=True, exist_ok=True)
+          md_path.parent.mkdir(parents=True, exist_ok=True)
 
-          echo "BODY<<EOF" >> $GITHUB_ENV
-          echo "$BODY" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          # JSONL record (safe-escaped via json.dumps)
+          rec = {
+            "id": issue_id,
+            "model_version": "pending",
+            "prompt": title,
+            "model_output": "(from issue body)",
+            "axis_scores": [0,0,0,0,0],
+            "violation_tags": ["unspecified"],
+            "sensitive_domain": "unspecified",
+            "domain_assessment": "unspecified",
+            "human_rationale": body,
+            "decision": "Episode Terminated (Community Report)",
+            "approver": f"{reporter}, via GitHub issue",
+            "next_action": "Add to failures, schedule rebirth"
+          }
+          with open(jsonl_path, 'a', encoding='utf-8') as jf:
+              jf.write(json.dumps(rec, ensure_ascii=False) + '\n')
 
-      - name: Create failure files
-        run: |
-          mkdir -p data/failures incidents
+          # Markdown incident log
+          date_fmt = f"{today[:4]}-{today[4:6]}-{today[6:]}"
+          md = f"""# Incident Report {issue_id}
 
-          JSON_FILE="data/failures/failures_$(date +%Y%m%d).jsonl"
-          MD_FILE="incidents/${ISSUE_ID}.md"
-
-          # Append JSONL entry
-          cat >> "$JSON_FILE" <<EOF
-{"id":"$ISSUE_ID","model_version":"pending","prompt":"$TITLE","model_output":"(from issue body)","axis_scores":[0,0,0,0,0],"violation_tags":["unspecified"],"sensitive_domain":"unspecified","domain_assessment":"unspecified","human_rationale":"$BODY","decision":"Episode Terminated (Community Report)","approver":"${{ github.actor }}, via GitHub issue","next_action":"Add to failures, schedule rebirth"}
-EOF
-
-          # Create incident log
-          cat > "$MD_FILE" <<EOF
-# Incident Report $ISSUE_ID
-
-**Date:** $(date +%Y-%m-%d)  
-**Reported by:** @${{ github.actor }}
+**Date:** {date_fmt}  
+**Reported by:** @{reporter}
 
 ## Prompt
-\`\`\`
-$TITLE
-\`\`\`
+
+{title}
+
 
 ## Model Output
 (see issue body)
@@ -71,10 +88,20 @@ Episode Terminated (Community Report)
 
 ## Next Action
 Add to failures, schedule rebirth.
-EOF
+"""
+          md_path.write_text(md, encoding='utf-8')
 
-      - name: Commit and push
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "Add failure from issue #${{ github.event.issue.number }} ($ISSUE_ID)"
-          branch: main
+          print(f"Created:\n - {jsonl_path}\n - {md_path}")
+          PY
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/failures/*.jsonl incidents/*.md || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Add failure from issue #${{ github.event.issue.number }}"
+            git push
+          fi
