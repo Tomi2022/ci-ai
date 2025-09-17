@@ -19,31 +19,27 @@ jobs:
       - name: Convert issue to failure files
         uses: actions/github-script@v7
         with:
-          script: |
+          script: >
             const fs = require('fs');
             const path = require('path');
             const issue = context.payload.issue || {};
             const labels = (issue.labels || []).map(l => l.name);
-            // Only act on issues labeled 'failure'
             if (!labels.includes('failure')) {
               core.info("Issue not labeled 'failure'; skipping.");
               return;
             }
-
             const now = new Date();
             const today = now.toISOString().slice(0,10).replace(/-/g, '');
             const dateFmt = now.toISOString().slice(0,10);
             const issueNumber = issue.number || 0;
             const issueId = `INC-${today}-${String(issueNumber).padStart(4,'0')}`;
-            const title = (issue.title || '').replace(/\r?\n/g, ' ').trim();
-            const body = (issue.body || '').replace(/\r?\n/g, ' ').trim();
+            const title = (issue.title || '').replace(/\\r?\\n/g, ' ').trim();
+            const body = (issue.body || '').replace(/\\r?\\n/g, ' ').trim();
             const reporter = context.actor || 'unknown';
-
             const jsonlPath = path.join('data','failures', `failures_${today}.jsonl`);
             const mdPath = path.join('incidents', `${issueId}.md`);
             fs.mkdirSync(path.dirname(jsonlPath), { recursive: true });
             fs.mkdirSync(path.dirname(mdPath), { recursive: true });
-
             const rec = {
               id: issueId,
               model_version: 'pending',
@@ -58,8 +54,7 @@ jobs:
               approver: `${reporter}, via GitHub issue`,
               next_action: 'Add to failures, schedule rebirth'
             };
-            fs.appendFileSync(jsonlPath, JSON.stringify(rec) + '\n', 'utf8');
-
+            fs.appendFileSync(jsonlPath, JSON.stringify(rec) + '\\n', 'utf8');
             const md = [
               `# Incident Report ${issueId}`,
               '',
@@ -81,9 +76,8 @@ jobs:
               '## Next Action',
               'Add to failures, schedule rebirth.',
               ''
-            ].join('\n');
+            ].join('\\n');
             fs.writeFileSync(mdPath, md, 'utf8');
-
             core.info(`Created: ${jsonlPath} and ${mdPath}`);
 
       - name: Commit and push
@@ -97,3 +91,4 @@ jobs:
           fi
           git commit -m "Add failure (auto)"
           git push
+
