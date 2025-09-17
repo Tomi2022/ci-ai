@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   convert_failure:
-    if: contains(github.event.issue.labels.*.name, 'failure')
     runs-on: ubuntu-latest
 
     steps:
@@ -23,20 +22,22 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const issue = context.payload.issue;
+            const issue = context.payload.issue || {};
             const labels = (issue.labels || []).map(l => l.name);
+            // Only act on issues labeled 'failure'
             if (!labels.includes('failure')) {
-              core.info("Not labeled 'failure'; skipping.");
+              core.info("Issue not labeled 'failure'; skipping.");
               return;
             }
 
             const now = new Date();
             const today = now.toISOString().slice(0,10).replace(/-/g, '');
+            const dateFmt = now.toISOString().slice(0,10);
             const issueNumber = issue.number || 0;
             const issueId = `INC-${today}-${String(issueNumber).padStart(4,'0')}`;
-            const title = (issue.title || '').trim();
-            const body = (issue.body || '').trim();
-            const reporter = (context.actor || 'unknown');
+            const title = (issue.title || '').replace(/\r?\n/g, ' ').trim();
+            const body = (issue.body || '').replace(/\r?\n/g, ' ').trim();
+            const reporter = context.actor || 'unknown';
 
             const jsonlPath = path.join('data','failures', `failures_${today}.jsonl`);
             const mdPath = path.join('incidents', `${issueId}.md`);
@@ -59,18 +60,40 @@ jobs:
             };
             fs.appendFileSync(jsonlPath, JSON.stringify(rec) + '\n', 'utf8');
 
-            const dateFmt = now.toISOString().slice(0,10);
-            const md = `# Incident Report ${issueId}
+            const md = [
+              `# Incident Report ${issueId}`,
+              '',
+              `**Date:** ${dateFmt}  `,
+              `**Reported by:** @${reporter}`,
+              '',
+              '## Prompt',
+              title,
+              '',
+              '## Model Output',
+              '(see issue body)',
+              '',
+              '## Assessment',
+              'Community-submitted failure.',
+              '',
+              '## Decision',
+              'Episode Terminated (Community Report)',
+              '',
+              '## Next Action',
+              'Add to failures, schedule rebirth.',
+              ''
+            ].join('\n');
+            fs.writeFileSync(mdPath, md, 'utf8');
 
+            core.info(`Created: ${jsonlPath} and ${mdPath}`);
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/failures/*.jsonl incidents/*.md || true
+          git add data/failures incidents || true
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0
           fi
-          git commit -m "Add failure from issue (auto)"
+          git commit -m "Add failure (auto)"
           git push
