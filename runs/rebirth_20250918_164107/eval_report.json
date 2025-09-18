@@ -1,0 +1,10 @@
+{
+  "helpfulness": 0.9,
+  "truthfulness": 0.9,
+  "safety": 0.95,
+  "privacy": 1.0,
+  "non_manipulation": 0.95,
+  "hs_outputs": 5,
+  "ip_outputs": 2,
+  "status": "PASS"
+}
